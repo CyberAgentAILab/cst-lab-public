@@ -119,11 +119,11 @@ function App() {
 
         // Method 3: 代替動画の追加
         console.log('Adding fallback video...');
-        
+
         // 環境変数でPublic/Privateを判定
         const isPublicRepo = import.meta.env.VITE_PUBLIC_REPO === 'true';
         const isPrivateRepo = !isPublicRepo;
-        
+
         if (isPrivateRepo) {
           // Privateリポジトリの場合、公開されているサンプル動画を使用
           const sampleVideo: VideoFile = {
@@ -132,30 +132,54 @@ function App() {
             isDownloading: false,
             downloadProgress: 0
           };
-          
+
           if (videos.length === 0) {
             setVideos([sampleVideo]);
             setSelectedVideo(sampleVideo);
-            
+
             console.warn('Privateリポジトリのため、サンプル動画を使用しています。');
             console.warn('実際の動画を使用する場合は、public/movies/ フォルダに動画ファイルを配置してください。');
           }
         } else {
-          // Publicリポジトリの場合、GitHub Releasesからダウンロード
-          const releaseVideoUrl = 'https://github.com/CyberAgentAILab/cst-lab/releases/download/movie/test_movie.mp4';
-          const releaseVideo: VideoFile = {
-            name: 'テスト動画（GitHub Releases）',
-            url: releaseVideoUrl,
-            isDownloading: true,
-            downloadProgress: 0
-          };
+          // Publicリポジトリの場合
+          const isDevelopment = import.meta.env.DEV; // Viteの開発モードかどうか
+          const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-          if (videos.length === 0) {
-            setVideos([releaseVideo]);
-            setSelectedVideo(releaseVideo);
-            
-            // GitHub Releasesから動画をダウンロード
-            downloadVideoWithProgress(releaseVideoUrl, releaseVideo.name);
+          if (isDevelopment || isLocalhost) {
+            // 開発環境またはローカルプレビューでは、CORSエラーを避けるためサンプル動画を使用
+            const sampleVideo: VideoFile = {
+              name: 'サンプル動画（ローカル環境）',
+              url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+              isDownloading: false,
+              downloadProgress: 0
+            };
+
+            if (videos.length === 0) {
+              setVideos([sampleVideo]);
+              setSelectedVideo(sampleVideo);
+
+              console.warn('ローカル環境のため、サンプル動画を使用しています。');
+              console.warn('実際の動画を使用する場合は、public/movies/ フォルダに動画ファイルを配置してください。');
+              console.warn('GitHub Pagesにデプロイ後は、GitHub Releasesから動画が自動的にダウンロードされます。');
+            }
+          } else {
+            // 本番環境（GitHub Pages）では、GitHub Releasesの動画を直接参照
+            // 注: GitHub ReleasesのURLは直接video要素で使用可能だが、fetchはCORSエラーになる
+            const releaseVideoUrl = 'https://github.com/CyberAgentAILab/cst-lab-public/releases/download/movie/test_movie.mp4';
+            const releaseVideo: VideoFile = {
+              name: 'テスト動画（GitHub Releases）',
+              url: releaseVideoUrl,
+              isDownloading: false,  // ダウンロードせずに直接使用
+              downloadProgress: 100
+            };
+
+            if (videos.length === 0) {
+              setVideos([releaseVideo]);
+              setSelectedVideo(releaseVideo);
+
+              console.log('GitHub Pagesから動画を直接参照します。');
+              console.log('動画URL:', releaseVideoUrl);
+            }
           }
         }
 
@@ -164,20 +188,22 @@ function App() {
       }
     };
 
-    // 動画をダウンロードして進捗を追跡
+    // 動画をダウンロードして進捗を追跡（将来の使用のために保持）
+    // @ts-expect-error - 将来の使用のために保持
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const downloadVideoWithProgress = async (url: string, videoName: string) => {
       try {
         console.log(`Starting download from: ${url}`);
-        
+
         const response = await fetch(url);
-        
+
         console.log('Download response:', {
           status: response.status,
           statusText: response.statusText,
           headers: Object.fromEntries(response.headers.entries()),
           ok: response.ok
         });
-        
+
         if (!response.ok) {
           if (response.status === 404) {
             throw new Error('ファイルが見つかりません。URLを確認してください。');
@@ -186,11 +212,11 @@ function App() {
           }
           throw new Error(`Download failed: ${response.status} ${response.statusText}`);
         }
-        
+
         const contentLength = response.headers.get('content-length');
         const total = parseInt(contentLength || '0', 10);
         let loaded = 0;
-        
+
         console.log(`Content-Length: ${contentLength}, Total bytes: ${total}`);
 
         const reader = response.body?.getReader();
@@ -208,14 +234,14 @@ function App() {
             const progress = total > 0 ? Math.round((loaded / total) * 100) : 0;
 
             // ビデオリストの進捗を更新
-            setVideos(prevVideos => 
-              prevVideos.map(v => 
-                v.name === videoName 
+            setVideos(prevVideos =>
+              prevVideos.map(v =>
+                v.name === videoName
                   ? { ...v, downloadProgress: progress }
                   : v
               )
             );
-            
+
             console.log(`Download progress: ${loaded}/${total} bytes (${progress}%)`);
           }
 
@@ -224,32 +250,32 @@ function App() {
           const blobUrl = URL.createObjectURL(blob);
 
           // ビデオリストを更新
-          setVideos(prevVideos => 
-            prevVideos.map(v => 
-              v.name === videoName 
+          setVideos(prevVideos =>
+            prevVideos.map(v =>
+              v.name === videoName
                 ? { ...v, url: blobUrl, blobUrl, isDownloading: false, downloadProgress: 100 }
                 : v
             )
           );
 
           // 選択中のビデオも更新
-          setSelectedVideo(prev => 
-            prev?.name === videoName 
+          setSelectedVideo(prev =>
+            prev?.name === videoName
               ? { ...prev, url: blobUrl, blobUrl, isDownloading: false, downloadProgress: 100 }
               : prev
           );
         }
       } catch (error) {
         console.error('Download error:', error);
-        
+
         // エラーメッセージを表示
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         alert(`動画のダウンロードに失敗しました:\n${errorMessage}\n\nPrivateリポジトリの場合は、動画ファイルを public/movies フォルダに配置してください。`);
-        
+
         // エラー時は元のURLを使用（ブラウザのデフォルト動作に任せる）
-        setVideos(prevVideos => 
-          prevVideos.map(v => 
-            v.name === videoName 
+        setVideos(prevVideos =>
+          prevVideos.map(v =>
+            v.name === videoName
               ? { ...v, isDownloading: false, downloadProgress: 0 }
               : v
           )
@@ -410,19 +436,19 @@ function App() {
         <p>
           そこで、この接客ロボットが患者に寄り添った最高品質のロボット接客を実現するために、<b><u>「自分であればロボットにどのように接客をさせるか」</u></b>という目線で必要な項目の提案を行ってください。提案いただく接客内容は、どのような「状況」で、ロボットがどんな「推奨行動」を行うべきで、なぜそのような接客が必要と考えたのかの「理由」をセットで提案をしてください。
         </p>
-        <p>
+        <div>
         <b>提案例：</b>
           <ul>
             <li><b>「状況」：</b>ロボットが「受付はこちらです」と発言したが、患者の反応が薄い。</li>
             <li><b>「推奨行動」：</b>「受付はこちらです」と再度発言し直す。</li>
             <li><b>「理由」：</b>患者にとっては、ロボットがいる調剤薬局の来店が初めての様子で、ロボットが受付業務をすると認識していなさそうなので、再度発言することで、ロボットが受付業務をしていることを認識してもらうため。</li>
           </ul>
-        </p>
+        </div>
       </div>
 
       <div className="task-box">
         <h2>ロボットのスキル</h2>
-        <p>
+        <div>
           動画の中のロボットは、下記のスキルを持っていることとします。<b>下記のスキルの制約の中で、「患者に寄り添った最高品質のロボット接客」の提案</b>を行ってください。
           <ul>
             <li><b>ロボット動作：</b>頭や体の方向を動かすことや、腕を使ってジェスチャができます。ロボットは設置されている場所から移動することはできません。</li>
@@ -433,12 +459,12 @@ function App() {
             <li><b>受付方法：</b>ロボットは、タッチパネルを用いた受付業務と、対話を用いた受付業務の両方を行うことができます。例えば、ロボットからの問いかけに対して、患者はタッチパネルで回答することも、発言して回答することもできます。</li>
             <li><b>業務知識：</b>ロボットは、自身の業務内容を理解しており、業務に関連する知識はすべて持っているものとします。</li>
           </ul>
-        </p>
+        </div>
       </div>
 
       <div className="task-box">
         <h2>具体的なテストのやり方</h2>
-        <p>
+        <div>
           下記のやり方に従って、あなたが考える「患者に寄り添った最高品質のロボット接客」の提案を行ってください。
           <ol>
             <li><b>「再生」ボタンで視聴開始：</b>「再生」ボタンを押して、動画を視聴してください。「再生ボタン」の下のシークバーを用いて、動画を巻き戻すこともできます。</li>
@@ -450,7 +476,7 @@ function App() {
             <li> <b>「テスト終了」ボタンでファイルダウンロード：</b>全ての接客提案を記入し終えたら、「テスト終了」ボタンを押すと、「annotations_(時刻).jsonl」というファイルがダウンロードされます。</li>
             <li> <b>ファイルの送信：</b>ダウンロードされたファイルをメールに添付して、期日までに送信してください。</li>
           </ol>
-        </p>
+        </div>
       </div>
 
       <div style={{
