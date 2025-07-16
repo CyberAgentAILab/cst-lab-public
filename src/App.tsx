@@ -391,8 +391,19 @@ function App() {
   });
 
   const handleTestEnd = () => {
+    // Convert HH:MM:SS to seconds for comparison
+    const timeToSeconds = (time: string) => {
+      const [hours, minutes, seconds] = time.split(':').map(Number);
+      return hours * 3600 + minutes * 60 + seconds;
+    };
+
+    // Sort annotations by videoTime in ascending order
+    const sortedAnnotations = [...annotations].sort((a, b) => {
+      return timeToSeconds(a.videoTime) - timeToSeconds(b.videoTime);
+    });
+
     // JSONLデータをエクスポート
-    const jsonlData = annotations.map(annotation => JSON.stringify(annotation)).join('\n');
+    const jsonlData = sortedAnnotations.map(annotation => JSON.stringify(annotation)).join('\n');
     const blob = new Blob([jsonlData], { type: 'application/jsonl' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -532,7 +543,16 @@ function App() {
         <h3>接客提案一覧 ({annotations.length}件)</h3>
         {annotations.length > 0 && (
           <div style={{ textAlign: 'left', maxWidth: '1200px', margin: '0 auto' }}>
-            {annotations.map((annotation, index) => (
+            {[...annotations]
+              .sort((a, b) => {
+                // Convert HH:MM:SS to seconds for comparison
+                const timeToSeconds = (time: string) => {
+                  const [hours, minutes, seconds] = time.split(':').map(Number);
+                  return hours * 3600 + minutes * 60 + seconds;
+                };
+                return timeToSeconds(b.videoTime) - timeToSeconds(a.videoTime);
+              })
+              .map((annotation, index) => (
               <div
                 key={index}
                 style={getStyles().annotation}
