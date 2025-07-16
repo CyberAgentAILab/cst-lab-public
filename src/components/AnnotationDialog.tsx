@@ -120,11 +120,6 @@ export const AnnotationDialog = ({
       return;
     }
 
-    if (!reason.trim()) {
-      alert('理由を入力してください');
-      return;
-    }
-
     const annotation: Annotation = {
       videoTime,
       situation,
@@ -244,14 +239,14 @@ export const AnnotationDialog = ({
         
         <div style={{ marginBottom: '15px' }}>
           <label style={{ display: 'block', marginBottom: '5px', ...getStyles().label }}>
-            理由:
+            備考欄（任意）:
           </label>
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={6}
             style={getStyles().textarea}
-            placeholder="例：患者にとっては、ロボットがいる調剤薬局の来店が初めての様子で、ロボットが受付業務をすると認識していなさそうなので、再度発言することで、ロボットによる受付業務を認識してもらうため。"
+            placeholder="補足があれば記入してください。"
           />
         </div>
         

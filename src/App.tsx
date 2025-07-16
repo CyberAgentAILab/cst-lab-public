@@ -560,7 +560,7 @@ function App() {
                       <strong style={getStyles().annotationLabel}>推奨行動:</strong> {annotation.recommendedAction}
                     </div>
                     <div style={{ color: getStyles().annotation.color }}>
-                      <strong style={getStyles().annotationLabel}>理由:</strong> {annotation.reason}
+                      <strong style={getStyles().annotationLabel}>備考欄:</strong> {annotation.reason}
                     </div>
                   </div>
                   <button
